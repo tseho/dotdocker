@@ -9,7 +9,7 @@ It's a docker/docker-compose config for Symfony (2.* || 3.*), nginx and mariadb.
 In your Symfony installation, run the following commands:
 ```
 git clone --depth=1 --branch=master git@github.com:tseho/dotdocker.git .docker
-cd .docker && rm -r .git
+cd .docker && rm -rf .git
 ./configure
 ```
 Once installed, you can then start the containers with docker-compose when inside the **.docker** directory:
