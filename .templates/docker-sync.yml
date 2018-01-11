@@ -10,11 +10,9 @@ syncs:
         sync_host_port: {SYNC_PORT}
         sync_userid: '{USER_ID}'
         sync_excludes:
+            - '.docker'
             - '.git'
             - '.idea'
-            - 'app/cache'
-            - 'app/logs'
-            - 'app/tmp'
             - 'node_modules'
-            - 'web/bundles'
-            - '.docker'
+            - 'public/bundles'
+            - 'var'

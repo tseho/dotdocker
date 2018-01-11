@@ -2,7 +2,7 @@
 
 **Please do not use it in production.**
 
-It's a docker/docker-compose config for Symfony (2.* || 3.*), nginx and mariadb.
+It's a docker/docker-compose config for Symfony (^3.4 || ^4.0), nginx and mariadb.
 
 ## Installation
 

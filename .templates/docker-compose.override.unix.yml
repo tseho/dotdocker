@@ -2,7 +2,7 @@ version: '3'
 services:
     nginx:
         volumes:
-            - ../web:/srv/app/web:ro
+            - ../public:/srv/app/public:ro
         environment:
             VIRTUAL_HOST: {VIRTUAL_HOST}
         networks:
