@@ -1,0 +1,20 @@
+version: 2
+options:
+    compose-file-path: 'docker-compose.yml'
+    compose-dev-file-path: 'docker-compose.override.yml'
+syncs:
+    {PROJECT_NAME}-sync:
+        sync_strategy: 'unison'
+        src: '../'
+        sync_host_ip: '127.0.0.1'
+        sync_host_port: {SYNC_PORT}
+        sync_userid: '{USER_ID}'
+        sync_excludes:
+            - '.git'
+            - '.idea'
+            - 'app/cache'
+            - 'app/logs'
+            - 'app/tmp'
+            - 'node_modules'
+            - 'web/bundles'
+            - '.docker'

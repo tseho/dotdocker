@@ -1,0 +1,32 @@
+version: '3'
+services:
+    nginx:
+        volumes:
+            - ../web:/srv/app/web:ro
+        environment:
+            VIRTUAL_HOST: {VIRTUAL_HOST}
+        networks:
+            - nginx-proxy
+    app:
+        build:
+            args:
+                ENV: dev
+                USER: "{USER_ID}"
+        volumes:
+            - ..:/srv/app:rw
+        user: "{USER_ID}"
+    adminer:
+       image: adminer:4.3-standalone
+       links:
+           - db
+       environment:
+           VIRTUAL_HOST: adminer.{VIRTUAL_HOST}
+       networks:
+           - app
+           - nginx-proxy
+       restart: unless-stopped
+
+networks:
+    nginx-proxy:
+        external:
+            name: nginx-proxy

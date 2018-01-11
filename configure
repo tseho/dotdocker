@@ -1,0 +1,216 @@
+#!/bin/bash
+#================================================================
+# HEADER
+#================================================================
+#% SYNOPSIS
+#+    ${SCRIPT_NAME} PROJECT_NAME
+#%
+#% DESCRIPTION
+#%    This script will generate unversioned files used
+#%    by docker-compose depending on your OS.
+#%
+#% OPTIONS
+#%    -h, --help                    Print this help
+#%    -y                            Automatic yes to prompts.
+#%                                  Uses default values.
+#%
+#% EXAMPLES
+#%    ${SCRIPT_NAME} myproject
+#%
+#================================================================
+# END_OF_HEADER
+#================================================================
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/" && pwd )"
+SCRIPT_NAME="$(basename ${0})"
+USER_ID=$(id -u)
+ASSUME_YES=0
+
+usagefull() { head -${SCRIPT_HEADSIZE:-99} ${0} | grep -e "^#[%+-]" | sed -e "s/^#[%+-]//g" -e "s/\${SCRIPT_NAME}/${SCRIPT_NAME}/g" ; }
+
+SCRIPT_OPTS='yh-:'
+
+typeset -A ARRAY_OPTS
+ARRAY_OPTS=(
+    [help]=h
+    [yes]=y
+)
+
+while getopts ${SCRIPT_OPTS} OPTION ; do
+    # Long options to short
+    if [[ "x$OPTION" == "x-" ]]; then
+		LONG_OPTION=$OPTARG
+		LONG_OPTARG=$(echo $LONG_OPTION | grep "=" | cut -d'=' -f2)
+		LONG_OPTIND=-1
+		[[ "x$LONG_OPTARG" = "x" ]] && LONG_OPTIND=$OPTIND || LONG_OPTION=$(echo $OPTARG | cut -d'=' -f1)
+		[[ $LONG_OPTIND -ne -1 ]] && eval LONG_OPTARG="\$$LONG_OPTIND"
+		OPTION=${ARRAY_OPTS[$LONG_OPTION]}
+		[[ "x$OPTION" = "x" ]] && OPTION="?" OPTARG="-$LONG_OPTION"
+
+		if [[ $( echo "${SCRIPT_OPTS}" | grep -c "${OPTION}:" ) -eq 1 ]]; then
+			if [[ "x${LONG_OPTARG}" = "x" ]] || [[ "${LONG_OPTARG}" = -* ]]; then
+				OPTION=":" OPTARG="-$LONG_OPTION"
+			else
+				OPTARG="$LONG_OPTARG";
+				if [[ $LONG_OPTIND -ne -1 ]]; then
+					[[ $OPTIND -le $Optnum ]] && OPTIND=$(( $OPTIND+1 ))
+					shift $OPTIND
+					OPTIND=1
+				fi
+			fi
+		fi
+	fi
+
+    # Option followed by another option instead of args
+    if [[ "x${OPTION}" != "x:" ]] && [[ "x${OPTION}" != "x?" ]] && [[ "${OPTARG}" = -* ]]; then
+		OPTARG="$OPTION" OPTION=":"
+	fi
+
+    case "$OPTION"
+    in
+        h)
+            usagefull
+            exit 0
+        ;;
+        y)
+            ASSUME_YES=1
+        ;;
+        ?)
+            echo "${SCRIPT_NAME}: -$OPTARG: unknown option"
+        ;;
+    esac
+done
+# Remove options from arguments
+shift $((${OPTIND} - 1))
+
+# Detects the OS
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+    OS='unix'
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    OS='osx'
+else
+    echo "ERROR: Unrecognized OS, only linux and osx are supported."
+    exit 1
+fi
+
+echo "Environment '$OS' has been detected."
+
+# Load variables from .env
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    export $(egrep -v '^#' .env | xargs)
+fi
+
+if [[ -n "$1" ]]; then
+    # Pick first argument as PROJECT_NAME
+    PROJECT_NAME=$1
+fi
+
+# Read var from input
+#
+# usage:
+# read_var [question] [variable name] [default value]
+read_var() {
+    declare QUESTION=$1
+    declare NAME=$2
+    declare DEFAULT=$3
+
+    # If the variable is not already defined, use the default value
+    if [[ -z "${!NAME}" ]]; then
+        declare -g $NAME=$DEFAULT
+    fi
+
+    # If the -y option is used, don't ask the interactive question and keep the
+    # default or existing value.
+    if [[ $ASSUME_YES == 1 ]]; then
+        echo "${QUESTION}${!NAME}"
+        return 1
+    fi
+
+    # Ask everytime, with the existing|default value prefilled
+    read -e -p "$QUESTION" -i "${!NAME}" $NAME
+    # Keep asking if nothing has been submitted
+    while [[ -z "${!NAME}" ]]; do
+        read -e -p "$QUESTION" -i "${!NAME}" $NAME
+    done
+}
+
+# Ask for the variables with the interactive shell
+read_var "Name (lowercase, no-spaces): " "PROJECT_NAME" "$(basename $(realpath "$SCRIPT_DIR/../"))"
+read_var "Hostname: " "VIRTUAL_HOST" "${PROJECT_NAME}.localhost"
+
+if [[ $OS == 'osx' ]]; then
+    # If not defined, find a free one for the suggestion
+    if [[ -z $DOCKER_SYNC_PORT ]]; then
+        # source: https://unix.stackexchange.com/a/248319
+        read LOWERPORT UPPERPORT < /proc/sys/net/ipv4/ip_local_port_range
+        while :
+        do
+            DOCKER_SYNC_PORT="`shuf -i $LOWERPORT-$UPPERPORT -n 1`"
+            ss -lpn | grep -q ":$DOCKER_SYNC_PORT " || break
+        done
+    fi
+    read_var "Docker-sync on port: " "DOCKER_SYNC_PORT" "$DOCKER_SYNC_PORT"
+fi
+
+# Add or replace an env into .env
+#
+# usage:
+# save_env [name] [value]
+save_env() {
+    declare _NAME=$1
+    declare _VALUE=$2
+    declare _ENV_FILE="$SCRIPT_DIR/.env"
+
+    # check with regex if the variable is already defined
+    if grep -q -e "^$_NAME=" "$_ENV_FILE"; then
+        # Replace the line with existing variable with the new value.
+        sed -i "/^$_NAME=/c\\$_NAME=$_VALUE" "$_ENV_FILE"
+    else
+        # Otherwise, add as new line.
+        echo "$_NAME=$_VALUE" >> "$_ENV_FILE"
+    fi
+}
+
+touch "$SCRIPT_DIR/.env"
+
+# Save the values into .env
+save_env COMPOSE_PROJECT_NAME $PROJECT_NAME
+save_env PROJECT_NAME $PROJECT_NAME
+save_env VIRTUAL_HOST $VIRTUAL_HOST
+
+if [[ $OS == 'osx' ]]; then
+    save_env DOCKER_SYNC_PORT $DOCKER_SYNC_PORT
+fi
+
+# Create a file by using one of the templates and replace placeholders by values
+#
+# usage:
+# create_using_template [template path] [dest path]
+create_using_template() {
+    declare _FROM=$1
+    declare _DEST=$2
+    declare _BASENAME=$(basename $2)
+
+    if [ ! -f "$_DEST" ]; then
+        cp "$_FROM" "$_DEST"
+
+        sed -i "s/{PROJECT_NAME}/$PROJECT_NAME/g" "$_DEST"
+        sed -i "s/{VIRTUAL_HOST}/$VIRTUAL_HOST/g" "$_DEST"
+        sed -i "s/{USER_ID}/$USER_ID/g" "$_DEST"
+
+        if [[ $OS == 'osx' ]]; then
+            sed -i "s/{DOCKER_SYNC_PORT}/$DOCKER_SYNC_PORT/g" "$_DEST"
+        fi
+
+        echo "$_BASENAME has been generated."
+    else
+        echo "$_BASENAME already exists, skipping."
+    fi
+}
+
+# Create the docker-compose.override.yml and docker-sync.yml files
+create_using_template "$SCRIPT_DIR/.templates/docker-compose.override.$OS.yml" "$SCRIPT_DIR/docker-compose.override.yml"
+
+if [[ $OS == 'osx' ]]; then
+    create_using_template "$SCRIPT_DIR/.templates/docker-sync.yml" "$SCRIPT_DIR/docker-sync.yml"
+fi

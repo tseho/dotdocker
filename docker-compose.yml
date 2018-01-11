@@ -1,0 +1,36 @@
+version: '3'
+services:
+    nginx:
+        build: ./nginx/
+        depends_on:
+            - app
+        networks:
+            - app
+        restart: unless-stopped
+    app:
+        build: ./app/
+        depends_on:
+            - db
+        networks:
+            - app
+        restart: unless-stopped
+    db:
+        image: mariadb:10.3
+        volumes:
+            - dbdata:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: docker
+            MYSQL_USER: docker
+            MYSQL_PASSWORD: docker
+        networks:
+            - app
+        restart: unless-stopped
+
+networks:
+    app:
+        driver: bridge
+
+volumes:
+    dbdata: ~
+    uploads: ~
