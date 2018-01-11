@@ -15,7 +15,7 @@ services:
             - app
         restart: unless-stopped
     db:
-        image: mariadb:10.3
+        image: mariadb:10.2
         volumes:
             - dbdata:/var/lib/mysql
         environment:
