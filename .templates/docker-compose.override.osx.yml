@@ -15,6 +15,9 @@ services:
         volumes:
             - {PROJECT_NAME}-sync:/srv/app
         user: "{USER_ID}"
+    db:
+        volumes:
+            - ./db/initdb.d:/docker-entrypoint-initdb.d
     adminer:
        image: adminer:4.3-standalone
        links:
