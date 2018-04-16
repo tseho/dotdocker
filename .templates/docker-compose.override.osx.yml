@@ -19,7 +19,7 @@ services:
         volumes:
             - ./db/initdb.d:/docker-entrypoint-initdb.d
     adminer:
-        image: adminer:4.3-standalone
+        image: adminer:4-standalone
         links:
             - db
         environment:
