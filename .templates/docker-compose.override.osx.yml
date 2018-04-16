@@ -23,7 +23,7 @@ services:
         links:
             - db
         environment:
-            VIRTUAL_HOST: adminer.{VIRTUAL_HOST}
+            VIRTUAL_HOST: db.{VIRTUAL_HOST}
         networks:
             - app
             - nginx-proxy
