@@ -15,7 +15,7 @@ RUN apt-get install -y \
 RUN apt-get install -y \
         jpegoptim \
         libjpeg-dev \
-        libpng12-dev \
+        libpng-dev \
         optipng \
     && docker-php-ext-configure gd \
         --with-jpeg-dir=/usr/include/ \
@@ -30,7 +30,7 @@ RUN docker-php-ext-install \
 # Cleanup
 RUN apt-get purge -y \
         libicu-dev \
-        libpng12-dev \
+        libpng-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
