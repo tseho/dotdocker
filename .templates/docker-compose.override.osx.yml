@@ -6,7 +6,10 @@ services:
         environment:
             VIRTUAL_HOST: {VIRTUAL_HOST}
         networks:
-            - nginx-proxy
+            nginx-proxy: ~
+            default:
+                aliases:
+                    - {VIRTUAL_HOST}
     app:
         build:
             args:
